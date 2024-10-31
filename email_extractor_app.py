@@ -5,8 +5,6 @@ import streamlit as st
 from io import BytesIO
 from docx import Document
 import PyPDF2
-from streamlit.runtime.scriptrunner.script_run_context import add_script_run_ctx
-from threading import Thread
 
 def extract_emails_from_files(files):
     email_set = set()
