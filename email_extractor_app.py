@@ -4,18 +4,13 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 from docx import Document
-import textract
 import PyPDF2
-from tqdm import tqdm
-
-# Optional: If handling OCR (not implemented due to deployment constraints)
-# import pytesseract
-# from pdf2image import convert_from_bytes
 
 def extract_emails_from_files(files, log_callback=None):
     email_set = set()
+    # Enhanced regex pattern with word boundaries
     email_pattern = re.compile(
-        r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', re.IGNORECASE
+        r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b', re.IGNORECASE
     )
     
     total_files = len(files)
@@ -50,11 +45,6 @@ def extract_emails_from_files(files, log_callback=None):
                         for cell in row.cells:
                             matches = email_pattern.findall(cell.text)
                             email_set.update(matches)
-            elif file_extension == '.doc':
-                # Process Word .doc documents using textract
-                text = textract.process(uploaded_file, extension='doc').decode('utf-8')
-                matches = email_pattern.findall(text)
-                email_set.update(matches)
             elif file_extension == '.pdf':
                 # Process PDF files
                 reader = PyPDF2.PdfReader(uploaded_file)
@@ -95,22 +85,36 @@ def main():
     
     st.title("📧 Email Address Extractor from Various File Types")
     st.write("""
-    Upload multiple files (`.xls`, `.xlsx`, `.xlsm`, `.doc`, `.docx`, `.pdf`) containing email addresses in various formats.
+    Upload multiple files (`.xls`, `.xlsx`, `.xlsm`, `.docx`, `.pdf`) containing email addresses in various formats.
     The app will extract all unique email addresses and provide a consolidated file for download.
+    
+    **Note:** Scanned PDFs (containing images of text) are not supported. Please ensure your PDFs are text-based or use an OCR tool to convert them before uploading.
+    **Note:** To handle `.doc` files, please convert them to `.docx` before uploading.
     """)
     
-    # File Uploader
-    uploaded_files = st.file_uploader(
-        "Choose Files",
-        type=['xls', 'xlsx', 'xlsm', 'doc', 'docx', 'pdf'],
-        accept_multiple_files=True
-    )
+    # Instructions
+    st.markdown("""
+    ### Instructions:
+    1. **Upload Files:** Click on the "Choose Files" button to upload multiple Excel (`.xls`, `.xlsx`, `.xlsm`), Word (`.docx`), or PDF (`.pdf`) files.
+    2. **Select Download Format:** Choose your preferred format for the extracted emails.
+    3. **Filter Emails:** Use the filter box to search for specific email addresses.
+    4. **Extract Emails:** Click the "Extract Emails" button to start the process.
+    5. **Download Results:** Once extraction is complete, download the results in your chosen format.
+    """)
     
-    # Download Format Selection
-    download_format = st.selectbox(
-        "Select Download Format",
-        options=["Excel (.xlsx)", "CSV (.csv)", "Text (.txt)"]
-    )
+    # File Uploader and Download Format Selection in Columns
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        uploaded_files = st.file_uploader(
+            "Choose Files",
+            type=['xls', 'xlsx', 'xlsm', 'docx', 'pdf'],
+            accept_multiple_files=True
+        )
+    with col2:
+        download_format = st.selectbox(
+            "Select Download Format",
+            options=["Excel (.xlsx)", "CSV (.csv)", "Text (.txt)"]
+        )
     
     # Search/Filter Box
     filter_text = st.text_input("Filter Emails", help="Search for specific email addresses.")
@@ -122,7 +126,7 @@ def main():
     # Function to log messages
     def log(message):
         st.session_state.logs.append(message)
-        # Scroll to the bottom
+        # Scroll to the bottom (Streamlit doesn't support auto-scrolling, so rerun is used)
         st.experimental_rerun()
     
     # Extraction Button
@@ -195,6 +199,3 @@ def main():
         log_container = st.container()
         for log_msg in st.session_state.logs:
             log_container.write(f"- {log_msg}")
-
-if __name__ == "__main__":
-    main()
