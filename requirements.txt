@@ -1,6 +1,5 @@
 pandas==1.5.3
 openpyxl
-regex
 streamlit==1.39.0
 python-docx
 PyPDF2
