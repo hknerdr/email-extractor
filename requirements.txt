@@ -4,3 +4,6 @@ regex
 streamlit
 python-docx
 PyPDF2
+textract
+pytesseract
+pdf2image
