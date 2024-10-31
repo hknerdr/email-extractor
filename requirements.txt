@@ -1,5 +1,6 @@
 pandas
 openpyxl
+regex
 streamlit
 python-docx
 PyPDF2
