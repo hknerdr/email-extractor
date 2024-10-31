@@ -1,5 +1,5 @@
-pandas==1.5.3
+pandas
 openpyxl
-streamlit==1.39.0
+streamlit
 python-docx
 PyPDF2
