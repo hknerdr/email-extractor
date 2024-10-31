@@ -1,6 +1,7 @@
 pandas
-openpyxl
-regex
 streamlit
 python-docx
 PyPDF2
+openpyxl
+xlrd>=2.0.1
+mammoth
