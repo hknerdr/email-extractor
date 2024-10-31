@@ -5,6 +5,7 @@ import streamlit as st
 from io import BytesIO
 from docx import Document
 import PyPDF2
+import mammoth
 
 def extract_emails_from_files(files):
     email_set = set()
@@ -23,12 +24,17 @@ def extract_emails_from_files(files):
         log_area.markdown("\n".join(logs))
         try:
             if file_extension in ['.xls', '.xlsx', '.xlsm']:
-                xls = pd.ExcelFile(uploaded_file)
+                # Determine the engine based on file extension
+                if file_extension == '.xls':
+                    engine = 'xlrd'
+                else:
+                    engine = 'openpyxl'
+                xls = pd.ExcelFile(uploaded_file, engine=engine)
                 for sheet_name in xls.sheet_names:
                     logs.append(f"Reading sheet: {sheet_name}")
                     log_area.markdown("\n".join(logs))
                     df = pd.read_excel(
-                        xls, sheet_name=sheet_name, dtype=str)
+                        xls, sheet_name=sheet_name, dtype=str, engine=engine)
                     for column in df.columns:
                         for cell in df[column].dropna():
                             matches = email_pattern.findall(str(cell))
@@ -36,7 +42,7 @@ def extract_emails_from_files(files):
                                 email_set.add(email)
             elif file_extension == '.docx':
                 doc = Document(uploaded_file)
-                logs.append(f"Extracting text from Word document")
+                logs.append(f"Extracting text from Word (.docx) document")
                 log_area.markdown("\n".join(logs))
                 for para in doc.paragraphs:
                     matches = email_pattern.findall(para.text)
@@ -48,6 +54,15 @@ def extract_emails_from_files(files):
                             matches = email_pattern.findall(cell.text)
                             for email in matches:
                                 email_set.add(email)
+            elif file_extension == '.doc':
+                logs.append(f"Extracting text from Word (.doc) document")
+                log_area.markdown("\n".join(logs))
+                with uploaded_file:
+                    result = mammoth.extract_raw_text(uploaded_file)
+                    text = result.value
+                    matches = email_pattern.findall(text)
+                    for email in matches:
+                        email_set.add(email)
             elif file_extension == '.pdf':
                 reader = PyPDF2.PdfReader(uploaded_file)
                 logs.append(f"Extracting text from PDF")
@@ -81,13 +96,13 @@ def main():
 
     st.title("📧 Email Address Extractor from Various File Types")
     st.write("""
-    Upload multiple files (`.xls`, `.xlsx`, `.xlsm`, `.docx`, `.pdf`) containing email addresses in various formats.
+    Upload multiple files (`.xls`, `.xlsx`, `.xlsm`, `.doc`, `.docx`, `.pdf`) containing email addresses in various formats.
     The app will extract all unique email addresses and provide a consolidated Excel file for download.
     """)
 
     uploaded_files = st.file_uploader(
         "Choose Files",
-        type=['xls', 'xlsx', 'xlsm', 'docx', 'pdf'],
+        type=['xls', 'xlsx', 'xlsm', 'doc', 'docx', 'pdf'],
         accept_multiple_files=True
     )
 
@@ -102,12 +117,10 @@ def main():
                 email_df = pd.DataFrame({'Email Addresses': emails})
                 st.dataframe(email_df)
 
-                # Add copy to clipboard functionality
-                st.markdown("### Copy Emails to Clipboard")
+                # Display emails in a text area for easy copying
+                st.markdown("### Copy Emails")
                 emails_str = '\n'.join(emails)
-                st.code(emails_str)
-                st.button("Copy to Clipboard", on_click=lambda: st.experimental_set_query_params(
-                    emails=emails_str))
+                st.text_area("Extracted Emails", emails_str, height=200)
 
                 # Convert DataFrame to Excel
                 excel_data = convert_df_to_excel(email_df)
