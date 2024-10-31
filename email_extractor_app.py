@@ -6,7 +6,6 @@ from io import BytesIO
 from docx import Document
 import PyPDF2
 
-
 def extract_emails_from_files(files, log_callback=None):
     email_set = set()
     # Enhanced regex pattern with word boundaries
